@@ -1,0 +1,7 @@
+#files
+*.py[cod]
+*.ini
+
+#directories
+data/*
+__pycache__/
