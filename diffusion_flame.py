@@ -1,0 +1,110 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Mon Jan 08 17:57:47 2018
+
+@author: Mark Barbet
+"""
+
+"""
+An opposed-flow ethane/air diffusion flame
+"""
+
+import cantera as ct
+import numpy as np
+import matplotlib.pyplot as plt
+import os
+import efficiency_manipulate as em
+# Input parameters
+p = ct.one_atm  # pressure
+tin_f = 300.0  # fuel inlet temperature
+tin_o = 300.0  # oxidizer inlet temperature
+mdot_o = 0.72  # kg/m^2/s
+mdot_f = 0.24  # kg/m^2/s
+
+comp_o = 'O2:0.21, N2:0.78, AR:0.01'  # air composition
+comp_f = 'C2H6:1'  # fuel composition
+
+width = 0.02 # Distance between inlets is 2 cm
+
+loglevel = 1  # amount of diagnostic output (0 to 5)
+
+# Create the gas object used to evaluate all thermodynamic, kinetic, and
+# transport properties.
+#gas = ct.Solution('gri30.xml', 'gri30_mix')
+gas =ct.Solution(os.getcwd()+'\\TMRP codes\\USCMech\\uscmech.cti')
+gas.TP = gas.T, p
+
+# Create an object representing the counterflow flame configuration,
+# which consists of a fuel inlet on the left, the flow in the middle,
+# and the oxidizer inlet on the right.
+f = ct.CounterflowDiffusionFlame(gas, width=width)
+
+# Set the state of the two inlets
+f.fuel_inlet.mdot = mdot_f
+f.fuel_inlet.X = comp_f
+f.fuel_inlet.T = tin_f
+
+f.oxidizer_inlet.mdot = mdot_o
+f.oxidizer_inlet.X = comp_o
+f.oxidizer_inlet.T = tin_o
+
+# Set the boundary emissivities
+f.set_boundary_emissivities(0.0, 0.0)
+# Turn radiation off
+f.radiation_enabled = False
+
+f.set_refine_criteria(ratio=4, slope=0.2, curve=0.3, prune=0.04)
+
+# Solve the problem
+f.solve(loglevel, auto=True)
+f.show_solution()
+f.save('c2h6_diffusion.xml')
+
+# write the velocity, temperature, and mole fractions to a CSV file
+f.write_csv('c2h6_diffusion.csv', quiet=False)
+
+f.show_stats(0)
+
+# Plot Temperature without radiation
+figTemperatureModifiedFlame = plt.figure()
+plt.plot(f.flame.grid, f.T, label='Temperature without manipulation',linewidth=4)
+plt.title('Temperature of the flame')
+plt.ylim(0,2500)
+plt.xlim(0.000, 0.020)
+
+
+
+gas2 =em.efficiency_rate_swap(ct.Solution(os.getcwd()+'\\TMRP codes\\USCMech\\uscmech.cti'))
+import soln2cti as ctiw
+#gas2=em.efficiency_rate_swap(gas2)
+gas2 = ct.Solution(os.getcwd()+'\\pym_gas.cti')
+f2 = ct.CounterflowDiffusionFlame(gas2, width=width)
+f2.fuel_inlet.mdot = mdot_f
+f2.fuel_inlet.X = comp_f
+f2.fuel_inlet.T = tin_f
+f2.oxidizer_inlet.mdot = mdot_o
+f2.oxidizer_inlet.X = comp_o
+f2.oxidizer_inlet.T = tin_o
+# Set the boundary emissivities
+f2.set_boundary_emissivities(0.0, 0.0)
+# Turn radiation off
+f2.radiation_enabled = False
+f2.set_refine_criteria(ratio=4, slope=0.2, curve=0.3, prune=0.04)
+
+# Solve the problem
+f2.solve(loglevel, auto=True)
+f2.show_solution()
+f2.save('c2h6_diffusion_em.xml')
+f2.write_csv('c2h6_diffusion_em.csv', quiet=False)
+plt.plot(f2.flame.grid, f2.T, label='Temperature with manipulation')
+
+# Turn on radiation and solve again
+#f.radiation_enabled = True
+#f.solve(loglevel=1, refine_grid=False)
+#f.show_solution()
+
+# Plot Temperature with radiation
+#plt.plot(f.flame.grid, f.T, label='Temperature with radiation')
+#plt.legend()
+#plt.legend(loc=2)
+plt.savefig('c2h6_diffusion.pdf',dpi=1200)
