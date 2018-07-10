@@ -1,6 +1,19 @@
 #files
 *.py[cod]
 *.ini
+*.pdf
+*.cti
+*.html
+*.gdoc
+*.out
+*.xml
+*.xlsx
+*.csv
+*.dot
+*.png
+*.yaml
+*.doc
+*.txt
 
 #directories
 data/*
